@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+src/ims/__init__.py
+src/ims/cli.py
+src/ims/server.py
+src/summative_inventory.egg-info/PKG-INFO
+src/summative_inventory.egg-info/SOURCES.txt
+src/summative_inventory.egg-info/dependency_links.txt
+src/summative_inventory.egg-info/requires.txt
+src/summative_inventory.egg-info/top_level.txt
+tests/test_app.py
