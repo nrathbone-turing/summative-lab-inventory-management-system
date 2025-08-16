@@ -10,7 +10,7 @@ A small e-commerce admin portal with:
 ## Features
 - Create, read, update, delete inventory items
 - Lookup product details from OpenFoodFacts to prefill fields
-- Simple, reliable persistence (SQLite by default)
+- Simple, reliable persistence (JSON file for now, SQLite later)
 - CLI commands wire directly to the API
 
 ## Tech Stack
@@ -24,7 +24,7 @@ A small e-commerce admin portal with:
 ### 1. Clone & create virtual environment
 ```
 git clone git@github.com:nrathbone-turing/summative-lab-inventory-management-system.git
-cd inventory-api
+cd summative-lab-inventory-management-system
 
 python3 -m venv .venv
 source .venv/bin/activate  # Mac
@@ -34,11 +34,15 @@ source .venv/bin/activate  # Mac
 ### 2. Install dependencies
 ```
 pip install -r requirements.txt
+pip install -e .   # install package in editable mode (for ims imports)
 ```
 
 ### 3. Environment variables
+Create a `.env` file in the project root:
 ```
-
+FLASK_APP=ims.server
+FLASK_RUN_PORT=5555
+FLASK_ENV=development
 ```
 
 ### 4. Initialize database (first run)
@@ -55,17 +59,29 @@ flask run
 
 ## Data Model
 ```
-
+(id)       int, primary key
+name       string
+sku        string
+barcode    string
+brand      string
+category   string
+unit       string
+quantity   int
+price_cents int
+created_at datetime
+updated_at datetime
 ```
 
 ## API Overview
 
-### OpenFoodFacts
+(Coming soon)
 
 
 ## Example CLI Usage
 ```
-
+python -m ims.cli --help
+python -m ims.cli items list
+python -m ims.cli items add --name "Black Beans" --quantity 12
 ```
 
 ## Project Structure
@@ -73,18 +89,21 @@ flask run
 summative-lab-inventory-management-system/
 ├─ README.md
 ├─ requirements.txt
+├─ pyproject.toml
 ├─ .gitignore
-├─ server.py           # main Flask app
-├─ cli.py              # CLI entrypoint
-├─ data.json           # simple JSON file for persistence
+├─ .env
+├─ src/
+│  └─ ims/
+│     ├─ __init__.py
+│     ├─ server.py      # Flask app
+│     └─ cli.py         # CLI entry
 └─ tests/
    └─ test_app.py
 ```
 
 ## Persistence Flow Diagram
-```
 
-```
+(Coming soon)
 
 ## About This Repo
 
