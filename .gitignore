@@ -1,4 +1,24 @@
+# Virtual environment
 .venv/
+venv/
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Environment variables
 .env
+
+# Packaging
+*.egg-info/
+dist/
+build/
+
+# Test & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Misc
+.DS_Store
