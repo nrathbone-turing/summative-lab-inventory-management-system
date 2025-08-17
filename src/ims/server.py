@@ -319,6 +319,32 @@ def search_off_by_name():
     normalized = [_normalize_off_product_from_list(p) for p in products]
     return jsonify(normalized), 200
 
+@app.post("/api/items/from_lookup")
+def create_item_from_lookup():
+    barcode = (request.args.get("barcode") or "").strip()
+    if not barcode:
+        return jsonify({"error": "barcode required"}), 400
+
+    # reuse the lookup logic
+    url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
+    try:
+        resp = requests.get(url, headers={"User-Agent": "ims-lab/0.1"}, timeout=5)
+    except Exception:
+        return jsonify({"error": "upstream failed"}), 502
+    if resp.status_code != 200:
+        return jsonify({"error": "upstream bad status"}), 502
+
+    data = resp.json() or {}
+    product = data.get("product")
+    if not product:
+        return jsonify({"error": "not found"}), 404
+
+    item = _normalize_openfoodfacts_product({
+        "barcode": barcode,
+        "product": product
+    })
+    _DB.append(item)
+    return jsonify(item), 201
 
 if __name__ == "__main__":
     app.run(debug=True)
