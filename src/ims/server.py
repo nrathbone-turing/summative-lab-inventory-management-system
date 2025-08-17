@@ -48,7 +48,6 @@ def create_item():
         "barcode": data.get("barcode"),
         # Coerce numeric inputs; default to 0 if missing/blank
         "product_quantity": int(data.get("product_quantity", 0) or 0),
-        "price_cents": int(data.get("price_cents", 0) or 0),
     }
 
     _NEXT_ID += 1
@@ -65,7 +64,7 @@ def get_item(item_id: int):
     return jsonify({"error": "Not found"}), 404
 
 # partially update an item, only for known fields and ignore any unknown key (to support clients sending extra data without breaking)
-@app.patch("/api/items/<int:item_id>")
+@app.route("/api/items/<int:item_id>", methods=["PATCH", "PUT"])
 def update_item(item_id: int):
     payload = request.get_json(silent=True) or {}
 
@@ -343,8 +342,14 @@ def create_item_from_lookup():
         "barcode": barcode,
         "product": product
     })
+
+    # assign id here too
+    global _NEXT_ID
+    item["id"] = _NEXT_ID
+    _NEXT_ID += 1
+
     _DB.append(item)
     return jsonify(item), 201
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5555)
