@@ -10,13 +10,13 @@ A small e-commerce admin portal with:
 ## Features
 - Create, read, update, delete inventory items
 - Lookup product details from OpenFoodFacts to prefill fields
-- Simple, reliable persistence (JSON file for now, SQLite later)
+- In-memory persistence (resets on restart); JSON file/SQLite planned
 - CLI commands wire directly to the API
 
 ## Tech Stack
 - **Backend:** Flask
-- **HTTP:** Requests (for OpenFoodFacts)
-- **CLI:** Argparse
+- **HTTP:** Requests (OpenFoodFacts)
+- **CLI:** Click
 - **Testing:** pytest, Flask test client
 
 ## Installation & Setup
@@ -37,82 +37,103 @@ pip install -r requirements.txt
 pip install -e .   # install package in editable mode (for ims imports)
 ```
 
-### 3. Environment variables
-Create a `.env` file in the project root:
+### 3. Run the API
 ```
-FLASK_APP=ims.server
-FLASK_RUN_PORT=5555
-FLASK_ENV=development
-```
-
-### 4. Initialize database (first run)
-```
-python -m server.manage db-init     
-python -m server.manage db-seed     # sample data
+# from repo root
+python src/ims/server.py
+# -> http://127.0.0.1:5555
 ```
 
-### 5. Run the API
+## Data Model (current in-memory schema)
 ```
-flask run
-# => http://127.0.0.1:5000
-```
-
-## Progress Checklist (based on rubric)
-
-### Flask Routing
-- [X] At least 1 route built with Flask (GET /api/health)
-- [X] CRUD routes for `/items`
-- [X] Additional helper routes (e.g., /items/<id>/restock, /items/<id>/deduct)
-
-### CRUD
-- [X] Create (POST /items)
-- [X] Read (GET /items and GET /items/<id>)
-- [X] Update (PATCH /items/<id>)
-- [X] Delete (DELETE /items/<id>)
-
-### External API Integration
-- [X] Build route to fetch data from OpenFoodFacts (GET /lookup?barcode=...)
-- [ ] Build route to search products by name (GET /search?name=...)
-- [ ] Add fetched data into local database/array
-
-### Git Management
-- [X] Use git regularly for commits
-- [X] Create feature branches for routes, CLI, external API, etc.
-- [X] Open pull requests and merge into main
-- [X] Clear branches after merge
-
-### Testing
-- [X] Test health route
-- [X] Test CRUD operations
-- [X] Test external API integration (mock requests)
-- [ ] Full test suite covering features
-
-## Data Model
-```
-(id)       int, primary key
-name       string
-sku        string
-barcode    string
-brand      string
-category   string
-unit       string
-quantity   int
-price_cents int
-created_at datetime
-updated_at datetime
+id               int, generated
+product_name     string
+barcode          string
+product_quantity int
 ```
 
-## API Overview
+## Persistence
+Currently, items are stored in memory only and reset on server restart.
+Future versions may add:
+- JSON file storage for simple persistence
+- SQLite/SQLAlchemy for relational persistence
 
-(Coming soon)
+## API Endpoints
+All endpoints return JSON. Invalid input returns 400, missing items return 404.
+- `GET /api/items`
+- `POST /api/items`
+- `GET /api/items/<id>`
+- `PATCH /api/items/<id>`
+- `DELETE /api/items/<id>`
+- `POST /api/items/<id>/restock` (body: `{"delta": <int>=0+}`)
+- `POST /api/items/<id>/deduct` (body: `{"delta": <int>=0+}`)
+- `GET /api/lookup/<barcode>`
+- `GET /api/search?name=<q>&limit=<n>`
 
-
+## Example REST Calls: create --> restock --> deduct (JSON)
+```
+# CREATE
+curl -X POST http://127.0.0.1:5555/api/items \
+  -H "Content-Type: application/json" \
+  -d '{"product_name":"Black Beans","barcode":"BEANS-400G","product_quantity":10}'
+```
+Response:
+```
+{
+  "id": 1,
+  "product_name": "Black Beans",
+  "barcode": "BEANS-400G",
+  "product_quantity": 10
+}
+```
+```
+# RESTOCK (+5)
+curl -X POST http://127.0.0.1:5555/api/items/1/restock \
+  -H "Content-Type: application/json" \
+  -d '{"delta": 5}'
+```
+Response:
+```
+{
+  "id": 1,
+  "product_name": "Black Beans",
+  "barcode": "BEANS-400G",
+  "product_quantity": 15
+}
+```
+```
+# DEDUCT (-2)
+curl -X POST http://127.0.0.1:5555/api/items/1/deduct \
+  -H "Content-Type: application/json" \
+  -d '{"delta": 2}'
+```
+Response:
+```
+{
+  "id": 1,
+  "product_name": "Black Beans",
+  "barcode": "BEANS-400G",
+  "product_quantity": 13
+}
+```
 ## Example CLI Usage
 ```
-python -m ims.cli --help
-python -m ims.cli items list
-python -m ims.cli items add --name "Black Beans" --quantity 12
+# from repo root
+python -m src.ims.cli list
+python -m src.ims.cli add --name "Black Beans" --barcode BEANS-400G --quantity 10
+python -m src.ims.cli update 1 --quantity 20
+python -m src.ims.cli delete 1
+python -m src.ims.cli lookup 737628064502  # adds via OpenFoodFacts lookup
 ```
+## Running Tests
+```
+pytest -v
+```
+Covers:
+- CRUD endpoints
+- Restock/deduct logic
+- CLI commands
+- OpenFoodFacts integration
 
 ## Project Structure
 ```
@@ -121,19 +142,19 @@ summative-lab-inventory-management-system/
 ├─ requirements.txt
 ├─ pyproject.toml
 ├─ .gitignore
-├─ .env
 ├─ src/
 │  └─ ims/
 │     ├─ __init__.py
-│     ├─ server.py      # Flask app
-│     └─ cli.py         # CLI entry
+│     ├─ server.py   # Flask app + routes
+│     └─ cli.py      # Click CLI
 └─ tests/
-   └─ test_app.py
+   ├─ test_health.py
+   ├─ test_items_crud.py
+   ├─ test_items_helpers.py
+   ├─ test_openfoodfacts_create.py
+   ├─ test_openfoodfacts_lookup.py
+   └─ test_openfoodfacts_search.py
 ```
-
-## Persistence Flow Diagram
-
-(Coming soon)
 
 ## About This Repo
 
