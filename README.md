@@ -71,7 +71,7 @@ flask run
 - [X] Delete (DELETE /items/<id>)
 
 ### External API Integration
-- [ ] Build route to fetch data from OpenFoodFacts (GET /lookup?barcode=...)
+- [X] Build route to fetch data from OpenFoodFacts (GET /lookup?barcode=...)
 - [ ] Build route to search products by name (GET /search?name=...)
 - [ ] Add fetched data into local database/array
 
@@ -84,7 +84,7 @@ flask run
 ### Testing
 - [X] Test health route
 - [X] Test CRUD operations
-- [ ] Test external API integration (mock requests)
+- [X] Test external API integration (mock requests)
 - [ ] Full test suite covering features
 
 ## Data Model
