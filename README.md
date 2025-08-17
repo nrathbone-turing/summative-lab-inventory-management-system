@@ -60,15 +60,15 @@ flask run
 ## Progress Checklist (based on rubric)
 
 ### Flask Routing
-- [ ] 1 route built with Flask (GET /api/health)
-- [ ] CRUD routes for `/items`
+- [X] At least 1 route built with Flask (GET /api/health)
+- [X] CRUD routes for `/items`
 - [ ] Additional helper routes (e.g., /items/<id>/restock, /items/<id>/deduct)
 
 ### CRUD
-- [ ] Create (POST /items)
-- [ ] Read (GET /items and GET /items/<id>)
-- [ ] Update (PATCH /items/<id>)
-- [ ] Delete (DELETE /items/<id>)
+- [X] Create (POST /items)
+- [X] Read (GET /items and GET /items/<id>)
+- [X] Update (PATCH /items/<id>)
+- [X] Delete (DELETE /items/<id>)
 
 ### External API Integration
 - [ ] Build route to fetch data from OpenFoodFacts (GET /lookup?barcode=...)
@@ -76,14 +76,14 @@ flask run
 - [ ] Add fetched data into local database/array
 
 ### Git Management
-- [ ] Use git regularly for commits
-- [ ] Create feature branches for routes, CLI, external API, etc.
-- [ ] Open pull requests and merge into main
-- [ ] Clear branches after merge
+- [X] Use git regularly for commits
+- [X] Create feature branches for routes, CLI, external API, etc.
+- [X] Open pull requests and merge into main
+- [X] Clear branches after merge
 
 ### Testing
-- [ ] Test health route
-- [ ] Test CRUD operations
+- [X] Test health route
+- [X] Test CRUD operations
 - [ ] Test external API integration (mock requests)
 - [ ] Full test suite covering features
 
