@@ -4,6 +4,8 @@ from flask import Flask, jsonify, request
 import re
 import requests
 
+import urllib.parse
+
 app = Flask(__name__)
 
 # in-memory database
@@ -236,6 +238,87 @@ def lookup_off(barcode: str):
 
     # return 200 with normalized JSON if found
     return jsonify(_normalize_openfoodfacts_product(data)), 200
+
+def _normalize_off_product_from_list(prod: dict) -> dict:
+    
+    # create function to normalize a single product object from the OpenFoodFacts 'products' array in search results
+    # mirrors the logic in `_normalize_openfoodfacts_product`
+    
+    barcode = prod.get("barcode") or prod.get("_id")
+    name = (prod.get("product_name") or "").strip()
+    brands = (prod.get("brands") or "").strip()
+    brand = brands.split(",")[0].strip() if brands else None
+
+    qty_raw = prod.get("product_quantity")
+    try:
+        qty = int(qty_raw) if qty_raw is not None and str(qty_raw).strip() != "" else None
+    except (TypeError, ValueError):
+        qty = None
+
+    unit = None
+    if qty is None:
+        qtext = prod.get("quantity") or ""
+        m = re.match(r"\s*(\d+)\s*([A-Za-z]+)?", qtext)
+        if m:
+            qty = int(m.group(1))
+            unit = (m.group(2) or "").lower() or None
+    else:
+        qtext = prod.get("quantity") or ""
+        m = re.search(r"[A-Za-z]+", qtext)
+        unit = (m.group(0).lower() if m else None) or None
+
+    return {
+        "barcode": barcode,
+        "product_name": name,
+        "brand": brand,
+        "product_quantity": qty if qty is not None else 0,
+        "product_quantity_unit": unit,
+    }
+
+@app.get("/api/search")
+def search_off_by_name():
+    
+    # Search products by name via OpenFoodFacts & returns a list of normalized product summaries
+    # Query params:
+    #   name              str (required)
+    #   limit             int (optional, default = 5)
+    name = (request.args.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name is required"}), 400
+
+    limit_raw = request.args.get("limit", "5")
+    try:
+        limit = int(limit_raw)
+    except (TypeError, ValueError):
+        return jsonify({"error": "limit must be an integer"}), 400
+    if limit <= 0:
+        limit = 1
+    # just adding a limit for safety
+    if limit > 20:
+        limit = 20
+
+    # OpenFoodFacts search (v2) and only request only the fields we need for internal schema
+    fields = "code,product_name,brands,product_quantity,quantity"
+    qs = urllib.parse.urlencode({
+        "search_terms": name,
+        "page_size": limit,
+        "fields": fields,
+    })
+    url = f"https://world.openfoodfacts.org/api/v2/search?{qs}"
+
+    try:
+        resp = requests.get(url, headers={"User-Agent": "ims-lab/0.1"}, timeout=5)
+    except Exception:
+        return jsonify({"error": "upstream request failed"}), 502
+
+    if resp.status_code != 200:
+        return jsonify({"error": "upstream returned non-200"}), 502
+
+    data = resp.json() or {}
+    products = data.get("products") or []
+    normalized = [_normalize_off_product_from_list(p) for p in products]
+    return jsonify(normalized), 200
+
 
 if __name__ == "__main__":
     app.run(debug=True)

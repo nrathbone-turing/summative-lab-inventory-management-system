@@ -22,14 +22,14 @@ def test_search_expected_path(monkeypatch):
             "count": 2,
             "products": [
                 {
-                    "code": "111",
+                    "barcode": "111",
                     "product_name": "Choco Spread",
                     "brands": "BrandA",
                     "product_quantity": "400",
                     "quantity": "400 g",
                 },
                 {
-                    "code": "222",
+                    "barcode": "222",
                     "product_name": "Choco Bar",
                     "brands": "BrandB, Other",
                     "quantity": "50 g",
