@@ -62,7 +62,7 @@ flask run
 ### Flask Routing
 - [X] At least 1 route built with Flask (GET /api/health)
 - [X] CRUD routes for `/items`
-- [ ] Additional helper routes (e.g., /items/<id>/restock, /items/<id>/deduct)
+- [X] Additional helper routes (e.g., /items/<id>/restock, /items/<id>/deduct)
 
 ### CRUD
 - [X] Create (POST /items)
