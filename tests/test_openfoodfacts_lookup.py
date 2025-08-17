@@ -21,7 +21,7 @@ def test_expected_lookup_path(monkeypatch):
         
         return _MockResp(200, {
             "status": 1,
-            "code": "3017620422003",
+            "barcode": "3017620422003",
             "product": {
                 "product_name": "Nutella",
                 "brands": "Ferrero",

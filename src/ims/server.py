@@ -1,5 +1,9 @@
 from flask import Flask, jsonify, request
 
+# used for OpenFoodFacts HTTP calls
+import re
+import requests
+
 app = Flask(__name__)
 
 # in-memory database
@@ -63,17 +67,18 @@ def get_item(item_id: int):
 def update_item(item_id: int):
     payload = request.get_json(silent=True) or {}
 
-    for it in _DB:
-        if it["id"] == item_id:
+    for item in _DB:
+        if item["id"] == item_id:
             # only allow updates to known fields
             for key in ("product_name", "barcode", "product_quantity"):
                 if key in payload:
                     # Normalize numeric types for consistency
-                    if key in ("product_quantity"):
-                        it[key] = int(payload[key])
+                    if key == "product_quantity":
+                        item[key] = int(payload[key])
                     else:
-                        it[key] = payload[key]
-            return jsonify(it), 200
+                        item[key] = payload[key]
+            return jsonify(item), 200
+
     
     # returns 404 if not found
     return jsonify({"error": "Not found"}), 404
@@ -155,6 +160,82 @@ def deduct(item_id: int):
     # returns 404 if not found
     return jsonify({"error": "Not found"}), 404
 
+# OpenFoodFacts lookup
+
+# initial regex check to ensure the path param is digits only
+_BARCODE_RE = re.compile(r"^\d+$")
+
+def _normalize_openfoodfacts_product(openfoodfacts_payload: dict) -> dict:
+    
+    # convert OpenFoodFact's raw JSON into the simplified internal schema
+    # and only return fields we actually need for prefill
+    
+    barcode = openfoodfacts_payload.get("barcode")
+    product = openfoodfacts_payload.get("product") or {}
+    name = product.get("product_name") or ""
+    brands = product.get("brands") or ""
+    brand = brands.split(",")[0].strip() if brands else None
+
+    # preference for the numeric 'product_quantity' value if present; otherwise try to parse "quantity" i.e. like from "400 g"
+    qty_raw = product.get("product_quantity")
+    try:
+        qty = int(qty_raw) if qty_raw is not None and str(qty_raw).strip() != "" else None
+    except (TypeError, ValueError):
+        qty = None
+
+    unit = None
+    if qty is None:
+        # try parsing from textual quantity "400 g"
+        qtext = product.get("quantity") or ""
+        # regex parse logic taking the first int and first trailing word to determine unit
+        m = re.match(r"\s*(\d+)\s*([A-Za-z]+)?", qtext)
+        if m:
+            qty = int(m.group(1))
+            unit = (m.group(2) or "").lower() or None
+    else:
+        # if numeric qty found, try to get unit from "quantity" text using regex
+        qtext = product.get("quantity") or ""
+        m = re.search(r"[A-Za-z]+", qtext)
+        unit = (m.group(0).lower() if m else None) or None
+
+    return {
+        "barcode": barcode,
+        "product_name": name,
+        "brand": brand,
+        # default = 0
+        "product_quantity": qty if qty is not None else 0,
+        # unit is optional
+        "product_quantity_unit": unit,
+    }
+
+@app.get("/api/lookup/<barcode>")
+def lookup_off(barcode: str):
+    
+    # Lookup a product by its barcode from OpenFoodFacts and return normalized data
+    if not _BARCODE_RE.match(barcode):
+        # return 400 if barcode is invalid (non-digits)
+        return jsonify({"error": "barcode must be digits only"}), 400
+
+    # OpenFoodFacts v2 endpoint
+    url = f"https://world.openfoodfacts.org/api/v2/product/{barcode}.json"
+    try:
+        resp = requests.get(url, headers={"User-Agent": "ims-lab/0.1"}, timeout=5)
+    except Exception:
+        # return 502 if the external request times out, network is down, or the domain can’t be reached
+        return jsonify({"error": "upstream request failed"}), 502
+
+    if resp.status_code != 200:
+        # also return 502 if the request succeeds, but OpenFoodFacts returns something like a 404 or 500 response
+        return jsonify({"error": "upstream returned non-200"}), 502
+
+    data = resp.json()
+    if not data or data.get("status") != 1:
+        
+        # return 404 if OpenFoodFacts says not found
+        return jsonify({"error": "product not found"}), 404
+
+    # return 200 with normalized JSON if found
+    return jsonify(_normalize_openfoodfacts_product(data)), 200
 
 if __name__ == "__main__":
     app.run(debug=True)
